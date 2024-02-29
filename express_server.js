@@ -25,6 +25,21 @@ app.get("/urls/:id", (req, res) => {
     res.render("urls_show", templateVars);
 });
 
+app.post("/urls", (req, res) => {
+    console.log(req.body);
+    res.send("Ok");
+});
+
 app.listen(PORT, () => {
     console.log(`Example app listening on port ${PORT}!`);
 });
+
+const generateRandomString = () => {
+    const charset = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
+    let shortURL = '';
+    for(let i = 0; i < 6; i++){
+        const randomIndex = Math.floor(Math.random() * charset.length);
+        shortURL += charset[randomIndex];
+    }
+    return shortURL;
+};
