@@ -33,8 +33,8 @@ app.post("/urls", (req, res) => {
 });
 
 app.get("/u/:id", (req, res) => {
-    const longURL = urlDatabase[req.params.id];
-    res.redirect(longURL);
+    const templateVars = { id: req.params.id, longURL: urlDatabase[req.params.id] };
+    res.render("urls_show", templateVars);
 });
 
 app.post("/urls/:id/delete", (req, res) => {
@@ -43,8 +43,15 @@ app.post("/urls/:id/delete", (req, res) => {
         delete urlDatabase[id];
         res.redirect('/urls');
     } else {
-        res.status(404).send('URL not found');
+        res.redirect('/urls');
     }
+});
+
+app.post("/urls/:id", (req, res) => {
+    const longURL = req.body.longURL;
+    const id = req.params.id;
+    urlDatabase[id] = longURL;
+    res.redirect(`/urls/${id}`);
 });
 
 app.listen(PORT, () => {
