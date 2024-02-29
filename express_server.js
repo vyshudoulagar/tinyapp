@@ -12,7 +12,7 @@ const urlDatabase = {
 app.use(express.urlencoded({ extended: true }));
 
 app.get('/urls', (req, res) => {
-    const templateVars = {urls: urlDatabase};
+    const templateVars = { urls: urlDatabase };
     res.render('urls_index', templateVars);
 });
 
@@ -26,8 +26,15 @@ app.get("/urls/:id", (req, res) => {
 });
 
 app.post("/urls", (req, res) => {
-    console.log(req.body);
-    res.send("Ok");
+    data = req.body.longURL;
+    id = generateRandomString();
+    urlDatabase[id] = data;
+    res.redirect(`/u/${id}`);
+});
+
+app.get("/u/:id", (req, res) => {
+    const longURL = urlDatabase[req.params.id];
+    res.redirect(longURL);
 });
 
 app.listen(PORT, () => {
@@ -37,7 +44,7 @@ app.listen(PORT, () => {
 const generateRandomString = () => {
     const charset = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
     let shortURL = '';
-    for(let i = 0; i < 6; i++){
+    for (let i = 0; i < 6; i++) {
         const randomIndex = Math.floor(Math.random() * charset.length);
         shortURL += charset[randomIndex];
     }
