@@ -65,7 +65,6 @@ app.post("/login", (req, res) => {
 });
 
 app.post("/logout", (req, res) => {
-    console.log('Logging Out. Current Cookies: ', req.cookies);
     const username = req.body.username;
     res.clearCookie('username');
     res.redirect("/urls");
