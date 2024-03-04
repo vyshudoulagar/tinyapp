@@ -9,16 +9,16 @@ app.set('view engine', 'ejs');
 
 const users = {
     userRandomID: {
-      id: "userRandomID",
-      email: "user@example.com",
-      password: "purple-monkey-dinosaur",
+        id: "userRandomID",
+        email: "user@example.com",
+        password: "purple-monkey-dinosaur",
     },
     user2RandomID: {
-      id: "user2RandomID",
-      email: "user2@example.com",
-      password: "dishwasher-funk",
+        id: "user2RandomID",
+        email: "user2@example.com",
+        password: "dishwasher-funk",
     },
-  };
+};
 
 const urlDatabase = {
     "b2xVn2": "http://www.lighthouselabs.ca",
@@ -28,12 +28,26 @@ const urlDatabase = {
 app.use(express.urlencoded({ extended: true }));
 
 app.post("/register", (req, res) => {
-    const user_id = generateRandomString();
-    users[user_id] = {};
-    users[user_id].id = user_id;
-    users[user_id].email = req.body["email"];
-    users[user_id].password = req.body["password"];
-    res.cookie('user_id', user_id);
+    if (req.body["email"] === '' || req.body["password"] === '') {
+        res.status(400).send('Bad Request');
+        return;
+    } 
+    
+    const foundUser = getUserByEmail(req.body["email"])
+    if (foundUser) {
+        res.status(400).send('Bad Request');
+        return;
+    }
+    const userID = generateRandomString();
+
+    users[userID] = {
+        id: userID,
+        email: req.body.email,
+        password: req.body.password
+    }
+
+    console.log(users);
+    res.cookie('user_id', userID);
     res.redirect("/urls");
 });
 
@@ -83,7 +97,7 @@ app.post("/urls/:id", (req, res) => {
 });
 
 app.post("/login", (req, res) => {
-    const email = req.body.email;
+    const email = req.body.email; 
     res.cookie('email', email);
     res.redirect("/urls");
 });
@@ -111,4 +125,12 @@ const generateRandomString = () => {
         shortURL += charset[randomIndex];
     }
     return shortURL;
+};
+
+const getUserByEmail = (email) => {
+    for (const userID in users) {
+        if (users[userID].email === email) {
+            return users[userID];
+        }
+    }
 };
