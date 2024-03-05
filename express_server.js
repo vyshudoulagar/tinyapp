@@ -28,14 +28,14 @@ const urlDatabase = {
 app.use(express.urlencoded({ extended: true }));
 
 app.post("/register", (req, res) => {
-    if (req.body["email"] === '' || req.body["password"] === '') {
-        res.status(400).send('Bad Request');
+    if (req.body["email"].trim() === '' || req.body["password"].trim() === '') {
+        res.status(400).send('Email or password cannot be empty');
         return;
-    } 
-    
-    const foundUser = getUserByEmail(req.body["email"])
+    }
+
+    const foundUser = getUserByEmail(req.body["email"].trim());
     if (foundUser) {
-        res.status(400).send('Bad Request');
+        res.status(400).send('Email is already in use');
         return;
     }
     const userID = generateRandomString();
@@ -46,9 +46,13 @@ app.post("/register", (req, res) => {
         password: req.body.password
     }
 
-    console.log(users);
     res.cookie('user_id', userID);
     res.redirect("/urls");
+});
+
+app.get('/login', (req, res) => {
+    const templateVars = { user: req.cookies["user_id"] };
+    res.render('login', templateVars);
 });
 
 
@@ -97,7 +101,7 @@ app.post("/urls/:id", (req, res) => {
 });
 
 app.post("/login", (req, res) => {
-    const email = req.body.email; 
+    const email = req.body.email;
     res.cookie('email', email);
     res.redirect("/urls");
 });

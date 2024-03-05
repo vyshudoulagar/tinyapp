@@ -9,19 +9,14 @@
             <div class="navbar-nav">
                 <a class="nav-item nav-link" href="/urls">My URLs</a>
                 <a class="nav-item nav-link" href="/urls/new">Create New URL</a>
+                <a class="nav-item nav-link" href="/register">Register</a>
+                <% if(user.email) { %>
+                    <button type="submit" class="btn btn-primary">Logout</button>
+                    <% } else { %>
+                        <a class="nav-item nav-link" href="/login">Login</a>
+                        <% } %>
             </div>
         </div>
-        <% if (user.email) { %>
-            <form class="form-inline" action="/logout" method="POST">
-                <a>Logged in as: <%= user.email %>!&nbsp;</a>
-                <button type="submit" class="btn btn-outline-dark">Logout</button>
-            </form>
-            <% } else { %>
-                <form class="form-inline" action="/login" method="POST">
-                    <input type="email" name="email" placeholder="Email" style="width: 300px; margin: 1em"
-                        autocomplete="email" />
-                    <button type="submit" class="btn btn-outline-dark">Login</button>
-                </form>
-                <% } %>
+
     </nav>
 </header>
