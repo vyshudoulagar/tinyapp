@@ -28,6 +28,10 @@ const urlDatabase = { //urls database
 app.use(express.urlencoded({ extended: true })); //middleware to parse request bodies
 
 app.get("/register", (req, res) => {
+    const user = req.cookies.user_id;
+    if (user) {   //if the user is already logged in
+        return res.redirect("/urls");
+    }
     const templateVars = { user: null }; //as there is no user id before we register
     res.render("register", templateVars);
 });
@@ -56,16 +60,18 @@ app.post("/register", (req, res) => {
 });
 
 app.get('/login', (req, res) => {
+    const user = req.cookies.user_id;
+    if (user) {       //if the user is already logged in
+        return res.redirect("/urls");
+    }
     const templateVars = { user: null };  //as there is no user id before we login
     res.render('login', templateVars);
 });
 
 app.post("/login", (req, res) => {
     const foundUser = getUserByEmail(req.body.email.trim()); //checking if the email is valid
-    if (!foundUser) { //if the user is not found with the email in users database
-        res.status(403).send('Invalid Email');
-    } else if (req.body.password !== foundUser.password) { //if the password did not match
-        res.status(403).send('Incorrect Password');
+    if (!foundUser || req.body.password !== foundUser.password) { //if the user is not found with the email in users database or password did not match
+        res.status(403).send('Invalid login');
     } else {
         res.cookie('user_id', foundUser.id); //assigning a cookie for user id
         res.redirect("/urls");
@@ -78,11 +84,19 @@ app.post("/logout", (req, res) => {
 });
 
 app.get('/urls', (req, res) => {
+    const user = req.cookies.user_id;
+    if (!user) {   //if the user is not logged in
+        return res.redirect("/login");
+    }
     const templateVars = { user: users[req.cookies.user_id], urls: urlDatabase };
     res.render('urls_index', templateVars);
 });
 
 app.get("/urls/new", (req, res) => {
+    const user = req.cookies.user_id;
+    if (!user) {   //if the user is not logged in
+        return res.redirect("/login");
+    }
     const templateVars = { user: users[req.cookies.user_id] }
     res.render("urls_new", templateVars);
 });
@@ -93,6 +107,10 @@ app.get("/urls/:id", (req, res) => {
 });
 
 app.post("/urls", (req, res) => {
+    const user = req.cookies.user_id;
+    if (!user) {   //if the user is not logged in
+        return res.send("user is not logged in");
+    }
     const data = req.body.longURL;
     const id = generateRandomString();
     urlDatabase[id] = data;
@@ -100,8 +118,17 @@ app.post("/urls", (req, res) => {
 });
 
 app.get("/u/:id", (req, res) => {
-    const templateVars = { user: users[req.cookies.user_id], id: req.params.id, longURL: urlDatabase[req.params.id] };
-    res.render("urls_show", templateVars);
+    const shortURL = req.params.id;
+    console.log(shortURL);
+    for (const id in urlDatabase) {
+        console.log(id);
+        if (shortURL === id) {  //if the short url is valid
+            let longURL = urlDatabase[id];
+            res.redirect(longURL);
+            return;
+        }
+    }
+    return res.send("Invalid short url");
 });
 
 app.post("/urls/:id/delete", (req, res) => {
