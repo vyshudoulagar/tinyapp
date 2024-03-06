@@ -22,14 +22,14 @@ const users = {  //users database
 
 const urlDatabase = {
     b6UTxQ: {
-      longURL: "https://www.tsn.ca",
-      userID: "aJ48lW",
+        longURL: "https://www.tsn.ca",
+        userID: "aJ48lW",
     },
     i3BoGr: {
-      longURL: "https://www.google.ca",
-      userID: "aJ48lW",
+        longURL: "https://www.google.ca",
+        userID: "aJ48lW",
     },
-  };
+};
 
 // const urlDatabase = { //urls database
 //     "b2xVn2": "http://www.lighthouselabs.ca",
@@ -115,6 +115,7 @@ app.get("/urls/new", (req, res) => {
 app.get("/urls/:id", (req, res) => {
     const user = req.cookies.user_id;
     const id = req.params.id;
+    const urls = urlsForUser(user);
     console.log(id);
     if (!urlDatabase[id]) {   //if the id is not in database
         return res.send("invalid url");
@@ -122,11 +123,12 @@ app.get("/urls/:id", (req, res) => {
     if (!user) {   //if the user is not logged in
         return res.send("user is not logged in");
     }
-    if(!urlsForUser(user).includes(id)){  //if the user_id do not match url's user id
-        return res.send("user do not own the URL");
+    if (id in urls) {  //if the user_id do not match url's user id
+        const templateVars = { user: users[user], id: id, longURL: urlDatabase[id].longURL };
+        res.render("urls_show", templateVars);
+        return
     }
-    const templateVars = { user: users[user], id: id, longURL: urlDatabase[id].longURL };
-    res.render("urls_show", templateVars);
+    res.send("user do not own the URL");
 });
 
 app.post("/urls", (req, res) => {
@@ -143,7 +145,6 @@ app.post("/urls", (req, res) => {
 app.get("/u/:id", (req, res) => {
     const shortURL = req.params.id;
     for (const id in urlDatabase) {
-        console.log(id);
         if (shortURL === id) {  //if the short url is valid
             let longURL = urlDatabase[id].longURL;
             res.redirect(longURL);
@@ -156,23 +157,25 @@ app.get("/u/:id", (req, res) => {
 app.post("/urls/:id/delete", (req, res) => {
     const user = req.cookies.user_id;
     const id = req.params.id;
+    const urls = urlsForUser(user);
     if (!urlDatabase[id]) {   //if the id is not in database
         return res.send("invalid url");
     }
     if (!user) {   //if the user is not logged in
         return res.send("user is not logged in");
     }
-    if(!urlsForUser(user).includes(id)){
-        return res.send("user do not own the URL");
-    }
+    if (id in urls) {
         delete urlDatabase[id];
         res.redirect('/urls');
+        return;
+    }
+    res.send("user do not own the URL");
 });
 
 app.post("/urls/:id", (req, res) => {
     const longURL = req.body.longURL;
     const id = req.params.id;
-    urlDatabase[id] = longURL;
+    urlDatabase[id].longURL = longURL;
     res.redirect(`/urls/${id}`);
 });
 
@@ -199,11 +202,11 @@ const getUserByEmail = (email) => {
 };
 
 const urlsForUser = (id) => {
-    const urls = [];
-    for(const shortURL in urlDatabase){
-        if(urlDatabase[shortURL].userID === id){
-            urls.push(shortURL);
+    const urls = {};
+    for (const shortURL in urlDatabase) {
+        if (urlDatabase[shortURL].userID === id) {
+            urls[shortURL] = urlDatabase[shortURL].longURL;
         }
     }
-    console.log(urls);
+    return urls;
 };
