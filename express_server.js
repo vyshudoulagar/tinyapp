@@ -20,10 +20,21 @@ const users = {  //users database
     },
 };
 
-const urlDatabase = { //urls database
-    "b2xVn2": "http://www.lighthouselabs.ca",
-    "9sm5xK": "http://www.google.com"
-};
+const urlDatabase = {
+    b6UTxQ: {
+      longURL: "https://www.tsn.ca",
+      userID: "aJ48lW",
+    },
+    i3BoGr: {
+      longURL: "https://www.google.ca",
+      userID: "aJ48lW",
+    },
+  };
+
+// const urlDatabase = { //urls database
+//     "b2xVn2": "http://www.lighthouselabs.ca",
+//     "9sm5xK": "http://www.google.com"
+// };
 
 app.use(express.urlencoded({ extended: true })); //middleware to parse request bodies
 
@@ -86,7 +97,7 @@ app.post("/logout", (req, res) => {
 app.get('/urls', (req, res) => {
     const user = req.cookies.user_id;
     if (!user) {   //if the user is not logged in
-        return res.redirect("/login");
+        return res.send("user is not logged in");
     }
     const templateVars = { user: users[req.cookies.user_id], urls: urlDatabase };
     res.render('urls_index', templateVars);
@@ -97,12 +108,23 @@ app.get("/urls/new", (req, res) => {
     if (!user) {   //if the user is not logged in
         return res.redirect("/login");
     }
-    const templateVars = { user: users[req.cookies.user_id] }
+    const templateVars = { user: users[user] }
     res.render("urls_new", templateVars);
 });
 
 app.get("/urls/:id", (req, res) => {
-    const templateVars = { user: users[req.cookies.user_id], id: req.params.id, longURL: urlDatabase[req.params.id] };
+    const user = req.cookies.user_id;
+    const id = req.params.id;
+    if (!urlDatabase[id]) {   //if the id is not in database
+        return res.send("invalid url");
+    }
+    if (!user) {   //if the user is not logged in
+        return res.send("user is not logged in");
+    }
+    if(urlsForUser(user) !== req.params.id){  //if the user_id do not match url's user id
+        return res.send("user do not own the URL");
+    }
+    const templateVars = { user: users[user], id: id, longURL: urlDatabase[id].longURL };
     res.render("urls_show", templateVars);
 });
 
@@ -111,7 +133,7 @@ app.post("/urls", (req, res) => {
     if (!user) {   //if the user is not logged in
         return res.send("user is not logged in");
     }
-    const data = req.body.longURL;
+    const data = { longURL: req.body.longURL, userID: user };
     const id = generateRandomString();
     urlDatabase[id] = data;
     res.redirect(`/u/${id}`);
@@ -123,7 +145,7 @@ app.get("/u/:id", (req, res) => {
     for (const id in urlDatabase) {
         console.log(id);
         if (shortURL === id) {  //if the short url is valid
-            let longURL = urlDatabase[id];
+            let longURL = urlDatabase[id].longURL;
             res.redirect(longURL);
             return;
         }
@@ -132,13 +154,19 @@ app.get("/u/:id", (req, res) => {
 });
 
 app.post("/urls/:id/delete", (req, res) => {
+    const user = req.cookies.user_id;
     const id = req.params.id;
-    if (urlDatabase[id]) {
+    if (!urlDatabase[id]) {   //if the id is not in database
+        return res.send("invalid url");
+    }
+    if (!user) {   //if the user is not logged in
+        return res.send("user is not logged in");
+    }
+    if(urlsForUser(user) !== id){
+        return res.send("user do not own the URL");
+    }
         delete urlDatabase[id];
         res.redirect('/urls');
-    } else {
-        res.redirect('/urls');
-    }
 });
 
 app.post("/urls/:id", (req, res) => {
@@ -166,6 +194,14 @@ const getUserByEmail = (email) => {
     for (const userID in users) {
         if (users[userID].email === email) {
             return users[userID];
+        }
+    }
+};
+
+const urlsForUser = (id) => {
+    for(const shortURL in urlDatabase){
+        if(urlDatabase[shortURL].userID === id){
+            return shortURL;
         }
     }
 };
