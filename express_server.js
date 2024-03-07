@@ -1,10 +1,13 @@
 const express = require('express');
-const cookieParser = require('cookie-parser')
+const cookieSession = require('cookie-session')
 const bcrypt = require("bcryptjs");
 
 const app = express();
 
-app.use(cookieParser()); //to use cookies from requests
+app.use(cookieSession({
+    name: 'session',
+    keys: ['key1', 'key2']
+  }))
 
 const PORT = 8080; //default port 8080
 
@@ -42,7 +45,7 @@ const urlDatabase = {
 app.use(express.urlencoded({ extended: true })); //middleware to parse request bodies
 
 app.get("/register", (req, res) => {
-    const user = req.cookies.user_id;
+    const user = req.session.user_id; //Accessing session value
     if (user) {   //if the user is already logged in
         return res.redirect("/urls");
     }
@@ -51,19 +54,20 @@ app.get("/register", (req, res) => {
 });
 
 app.post("/register", (req, res) => {
-    if (req.body.email.trim() === '' || req.body.password.trim() === '') { //check if the user typed email and pw
+    const email = req.body.email.trim();
+    const password = req.body.password;
+    if (email === '' || password === '') { //check if the user typed email and pw
         res.status(400).send('Email or password cannot be empty'); //throw an error if the user did not fill email or pw
         return;
     }
 
-    const foundUser = getUserByEmail(req.body.email.trim()); //using trim to ignore blankspaces on the ends
+    const foundUser = getUserByEmail(email); //using trim to ignore blankspaces on the ends
     if (foundUser) {   //if the email is found in users database
         res.status(400).send('Email is already in use');
         return;
     }
     const userID = generateRandomString();  //generating random string for userID
 
-    const password = req.body.password;
     const hashedPassword = bcrypt.hashSync(password, 10); //hashing the password
 
     users[userID] = { //assigning registered values to users database
@@ -72,12 +76,12 @@ app.post("/register", (req, res) => {
         password: hashedPassword //storing the hashed password
     }
 
-    res.cookie('user_id', userID); //assigning a cookie for user id
+    req.session.user_id = userID;; //assigning a cookie for user id
     res.redirect("/urls");
 });
 
 app.get('/login', (req, res) => {
-    const user = req.cookies.user_id;
+    const user = req.session.user_id;
     if (user) {       //if the user is already logged in
         return res.redirect("/urls");
     }
@@ -96,21 +100,21 @@ app.post("/login", (req, res) => {
 });
 
 app.post("/logout", (req, res) => {
-    res.clearCookie('user_id'); //clearing the cookie user id
+    req.session = null; //clearing the cookie user id
     res.redirect("/login");
 });
 
 app.get('/urls', (req, res) => {
-    const user = req.cookies.user_id;
+    const user = req.session.user_id;
     if (!user) {   //if the user is not logged in
         return res.send("user is not logged in");
     }
-    const templateVars = { user: users[req.cookies.user_id], urls: urlDatabase };
+    const templateVars = { user: users[user], urls: urlDatabase };
     res.render('urls_index', templateVars);
 });
 
 app.get("/urls/new", (req, res) => {
-    const user = req.cookies.user_id;
+    const user = req.session.user_id;
     if (!user) {   //if the user is not logged in
         return res.redirect("/login");
     }
@@ -119,18 +123,18 @@ app.get("/urls/new", (req, res) => {
 });
 
 app.get("/urls/:id", (req, res) => {
-    const user = req.cookies.user_id;
-    const id = req.params.id;
+    const user = req.session.user_id;
+    const shortURL = req.params.id;
     const urls = urlsForUser(user);
-    console.log(id);
-    if (!urlDatabase[id]) {   //if the id is not in database
+
+    if (!urlDatabase[shortURL]) {   //if the id is not in database
         return res.send("invalid url");
     }
     if (!user) {   //if the user is not logged in
         return res.send("user is not logged in");
     }
-    if (id in urls) {  //if the user_id do not match url's user id
-        const templateVars = { user: users[user], id: id, longURL: urlDatabase[id].longURL };
+    if (shortURL in urls) {  //if the user_id do not match url's user id
+        const templateVars = { user: users[user], id: shortURL, longURL: urlDatabase[shortURL].longURL };
         res.render("urls_show", templateVars);
         return
     }
@@ -138,7 +142,7 @@ app.get("/urls/:id", (req, res) => {
 });
 
 app.post("/urls", (req, res) => {
-    const user = req.cookies.user_id;
+    const user = req.session.user_id;
     if (!user) {   //if the user is not logged in
         return res.send("user is not logged in");
     }
@@ -152,7 +156,7 @@ app.get("/u/:id", (req, res) => {
     const shortURL = req.params.id;
     for (const id in urlDatabase) {
         if (shortURL === id) {  //if the short url is valid
-            let longURL = urlDatabase[id].longURL;
+            let longURL = urlDatabase[shortURL].longURL;
             res.redirect(longURL);
             return;
         }
@@ -161,17 +165,17 @@ app.get("/u/:id", (req, res) => {
 });
 
 app.post("/urls/:id/delete", (req, res) => {
-    const user = req.cookies.user_id;
-    const id = req.params.id;
+    const user = req.session.user_id;
+    const shortURL = req.params.id;
     const urls = urlsForUser(user);
-    if (!urlDatabase[id]) {   //if the id is not in database
+    if (!urlDatabase[shortURL]) {   //if the id is not in database
         return res.send("invalid url");
     }
     if (!user) {   //if the user is not logged in
         return res.send("user is not logged in");
     }
-    if (id in urls) {
-        delete urlDatabase[id];
+    if (shortURL in urls) {
+        delete urlDatabase[shortURL];
         res.redirect('/urls');
         return;
     }
@@ -180,9 +184,9 @@ app.post("/urls/:id/delete", (req, res) => {
 
 app.post("/urls/:id", (req, res) => {
     const longURL = req.body.longURL;
-    const id = req.params.id;
-    urlDatabase[id].longURL = longURL;
-    res.redirect(`/urls/${id}`);
+    const shortURL = req.params.id;
+    urlDatabase[shortURL].longURL = longURL;
+    res.redirect(`/urls/${shortURL}`);
 });
 
 app.listen(PORT, () => {
