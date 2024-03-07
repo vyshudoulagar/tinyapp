@@ -1,6 +1,7 @@
 const express = require('express');
-const cookieSession = require('cookie-session')
+const cookieSession = require('cookie-session');
 const bcrypt = require("bcryptjs");
+const { getUserByEmail } = require('./helpers');
 
 const app = express();
 
@@ -61,7 +62,7 @@ app.post("/register", (req, res) => {
         return;
     }
 
-    const foundUser = getUserByEmail(email); //using trim to ignore blankspaces on the ends
+    const foundUser = getUserByEmail(email, users); //using trim to ignore blankspaces on the ends
     if (foundUser) {   //if the email is found in users database
         res.status(400).send('Email is already in use');
         return;
@@ -90,11 +91,11 @@ app.get('/login', (req, res) => {
 });
 
 app.post("/login", (req, res) => {
-    const foundUser = getUserByEmail(req.body.email.trim()); //checking if the email is valid
+    const foundUser = getUserByEmail(req.body.email.trim(), users); //checking if the email is valid
     if (!foundUser || !bcrypt.compareSync(req.body.password, foundUser.password)) { //if the user is not found with the email in users database or hashed password did not match
         res.status(403).send('Invalid login');
     } else {
-        res.cookie('user_id', foundUser.id); //assigning a cookie for user id
+        req.session.user_id = foundUser.id; //assigning a cookie for user id
         res.redirect("/urls");
     }
 });
@@ -201,14 +202,6 @@ const generateRandomString = () => {
         shortURL += charset[randomIndex];
     }
     return shortURL;
-};
-
-const getUserByEmail = (email) => {
-    for (const userID in users) {
-        if (users[userID].email === email) {
-            return users[userID];
-        }
-    }
 };
 
 const urlsForUser = (id) => {
