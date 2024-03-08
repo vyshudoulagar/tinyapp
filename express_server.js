@@ -5,10 +5,12 @@ const { getUserByEmail } = require('./helpers');
 
 const app = express();
 
-app.use(cookieSession({
+app.use(express.urlencoded({ extended: false })); //middleware to parse request bodies
+app.use(express.json());
+app.use(cookieSession({ //to encrypt the cookies
     name: 'session',
     keys: ['key1', 'key2']
-  }))
+}))
 
 const PORT = 8080; //default port 8080
 
@@ -18,12 +20,12 @@ const users = {  //users database
     userRandomID: {
         id: "userRandomID",
         email: "user@example.com",
-        password: "purple-monkey-dinosaur",
+        password: bcrypt.hashSync("purple-monkey-dinosaur", 10),
     },
     user2RandomID: {
         id: "user2RandomID",
         email: "user2@example.com",
-        password: "dishwasher-funk",
+        password: bcrypt.hashSync("dishwasher-funk", 10),
     },
 };
 
@@ -36,14 +38,11 @@ const urlDatabase = {
         longURL: "https://www.google.ca",
         userID: "aJ48lW",
     },
+    b2xVn2: {
+        longURL: "https://www.example.com",
+        userID: "userRandomID"
+    }
 };
-
-// const urlDatabase = { //urls database
-//     "b2xVn2": "http://www.lighthouselabs.ca",
-//     "9sm5xK": "http://www.google.com"
-// };
-
-app.use(express.urlencoded({ extended: true })); //middleware to parse request bodies
 
 app.get("/register", (req, res) => {
     const user = req.session.user_id; //Accessing session value
@@ -108,7 +107,7 @@ app.post("/logout", (req, res) => {
 app.get('/urls', (req, res) => {
     const user = req.session.user_id;
     if (!user) {   //if the user is not logged in
-        return res.send("user is not logged in");
+        return res.redirect("/login");
     }
     const templateVars = { user: users[user], urls: urlDatabase };
     res.render('urls_index', templateVars);
@@ -129,23 +128,23 @@ app.get("/urls/:id", (req, res) => {
     const urls = urlsForUser(user);
 
     if (!urlDatabase[shortURL]) {   //if the id is not in database
-        return res.send("invalid url");
+        return res.status(404).send("invalid url");
     }
     if (!user) {   //if the user is not logged in
-        return res.send("user is not logged in");
+        return res.status(401).send('User is not logged in');
     }
     if (shortURL in urls) {  //if the user_id do not match url's user id
         const templateVars = { user: users[user], id: shortURL, longURL: urlDatabase[shortURL].longURL };
         res.render("urls_show", templateVars);
         return
     }
-    res.send("user do not own the URL");
+    res.status(403).send("user do not own the URL");
 });
 
 app.post("/urls", (req, res) => {
     const user = req.session.user_id;
     if (!user) {   //if the user is not logged in
-        return res.send("user is not logged in");
+        return res.status(401).send('User is not logged in');
     }
     const data = { longURL: req.body.longURL, userID: user };
     const id = generateRandomString();
@@ -162,7 +161,7 @@ app.get("/u/:id", (req, res) => {
             return;
         }
     }
-    return res.send("Invalid short url");
+    return res.status(404).send("Invalid short url");
 });
 
 app.post("/urls/:id/delete", (req, res) => {
@@ -170,17 +169,17 @@ app.post("/urls/:id/delete", (req, res) => {
     const shortURL = req.params.id;
     const urls = urlsForUser(user);
     if (!urlDatabase[shortURL]) {   //if the id is not in database
-        return res.send("invalid url");
+        return res.status(404).send("invalid url");
     }
     if (!user) {   //if the user is not logged in
-        return res.send("user is not logged in");
+        return res.status(401).send('User is not logged in');
     }
     if (shortURL in urls) {
         delete urlDatabase[shortURL];
         res.redirect('/urls');
         return;
     }
-    res.send("user do not own the URL");
+    res.status(403).send("user do not own the URL");
 });
 
 app.post("/urls/:id", (req, res) => {
