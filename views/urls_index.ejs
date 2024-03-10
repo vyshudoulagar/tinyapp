@@ -26,25 +26,27 @@
                 </thead>
                 <tbody>
                     <% for (let id in urls) { %>
-                        <tr>
-                            <td>
-                                <%= id %>
-                            </td>
-                            <td>
-                                <%= urls[id].longURL %>
-                            </td>
-                            <td>
-                                <form method="GET" action="/urls/<%=id %>">
-                                    <button type="submit" class="btn btn-outline-primary my-1">Edit</button>
-                                </form>
-                            </td>
-                            <td>
-                                <form method="POST" action="/urls/<%=id %>/delete">
-                                    <button type="submit" class="btn btn-outline-danger my-1">Delete</button>
-                                </form>
-                            </td>
-                        </tr>
+                        <% if (urls[id].userID===user.id) { %>
+                            <tr>
+                                <td>
+                                    <%= id %>
+                                </td>
+                                <td>
+                                    <%= urls[id].longURL %>
+                                </td>
+                                <td>
+                                    <form method="GET" action="/urls/<%=id %>">
+                                        <button type="submit" class="btn btn-outline-primary my-1">Edit</button>
+                                    </form>
+                                </td>
+                                <td>
+                                    <form method="POST" action="/urls/<%=id %>/delete">
+                                        <button type="submit" class="btn btn-outline-danger my-1">Delete</button>
+                                    </form>
+                                </td>
+                            </tr>
                         <% } %>
+                    <% } %>
                 </tbody>
             </table>
         </main>
