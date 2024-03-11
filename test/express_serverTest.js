@@ -25,7 +25,7 @@ describe("Login and Access Control Test", () => {
     it('should redirect to "/login" for access to "http://localhost:8080/urls" without logging in', () => {
         return chai.request("http://localhost:8080")
         //make a GET request to /urls
-        .get("/urls")
+        .get("/")
         .then((accessRes) => {
             //expect to redirect to login page
             expect(accessRes.redirects).to.include('http://localhost:8080/login');
